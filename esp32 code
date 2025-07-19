@@ -1,0 +1,55 @@
+#define BLYNK_TEMPLATE_ID "your template id"
+#define BLYNK_TEMPLATE_NAME "yur template name"
+#define BLYNK_AUTH_TOKEN "your auth token"
+
+
+
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+
+char ssid[] = "your wifi ssid";
+char pass[] = "your password";
+
+#define RELAY_PIN 5
+#define DHTPIN 15
+#define DHTTYPE DHT11 // Or DHT22
+
+DHT dht(DHTPIN, DHTTYPE);
+BlynkTimer timer;
+
+// Control relay from app
+BLYNK_WRITE(V0) {
+  int value = param.asInt();
+  digitalWrite(RELAY_PIN, value); // 1 = ON, 0 = OFF
+}
+
+// Send temperature & humidity to Blynk app
+void sendSensorData() {
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+
+  if (isnan(temp) || isnan(hum)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  Blynk.virtualWrite(V1, temp);
+  Blynk.virtualWrite(V2, hum);
+}
+
+void setup() {
+  Serial.begin(115200);
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW); // Light initially OFF
+  dht.begin();
+  timer.setInterval(2000L, sendSensorData); // Every 2 sec
+}
+
+void loop() {
+  Blynk.run();
+  timer.run();
+}
